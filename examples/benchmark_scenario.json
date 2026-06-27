@@ -1,0 +1,12 @@
+{
+  "name": "minimal-agent-context-plan",
+  "request": "Build the smallest correct agent context plan with proof-gated execution.",
+  "context_tokens": 9000,
+  "tool_schema_tokens": 2400,
+  "expected_output_tokens": 1400,
+  "expected_patch_size_bytes": 5200,
+  "wall_time_ms": 90000,
+  "tests_total": 6,
+  "measurements": []
+}
+

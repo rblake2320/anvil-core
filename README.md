@@ -154,7 +154,7 @@ From this repo, run the local end-to-end artifact flow:
 ```powershell
 .\.venv\Scripts\python.exe .\scripts\run_three_layer_e2e.py `
   --compiler-root ..\anvil_context_compiler `
-  --harness-root ..\anvil-harness\anvil `
+  --harness-root ..\anvil-harness `
   --core-root .
 ```
 

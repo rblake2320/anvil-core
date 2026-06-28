@@ -37,6 +37,8 @@ def main(argv: list[str] | None = None) -> int:
         ledger_path = workdir / "anvil_ledger.sqlite3"
         contract_path = workdir / "contract.json"
         harness_contract_path = workdir / "harness_contract.json"
+        harness_run_path = workdir / "harness_run"
+        harness_report_path = workdir / "harness_run_report.json"
         report_path = workdir / "benchmark_report.json"
 
         for root in (compiler_root, harness_root, core_root):
@@ -87,6 +89,23 @@ def main(argv: list[str] | None = None) -> int:
                 sys.executable,
                 "-m",
                 "anvil_core.cli",
+                "run-harness-contract",
+                "--harness-contract",
+                str(harness_contract_path),
+                "--mode",
+                "simulated",
+                "--run-dir",
+                str(harness_run_path),
+                "--out",
+                str(harness_report_path),
+            ],
+            cwd=core_root,
+        )
+        _run(
+            [
+                sys.executable,
+                "-m",
+                "anvil_core.cli",
                 "benchmark",
                 "--scenario",
                 str(core_root / "examples" / "benchmark_scenario.json"),
@@ -103,12 +122,16 @@ def main(argv: list[str] | None = None) -> int:
 
         contract = _read_json(contract_path)
         harness_contract = _read_json(harness_contract_path)
+        harness_report = _read_json(harness_report_path)
         report = _read_json(report_path)
         assert contract["scope_in"] == ["src"]
         assert contract["scope_out"] == ["prod"]
         assert all(task["scope_paths"] == ["src/*"] for task in contract["tasks"])
         assert harness_contract["scope_in"] == ["src"]
         assert harness_contract["tasks"][0]["paths"] == ["src/*"]
+        assert harness_report["ok"] is True
+        assert harness_report["audit_ok"] is True
+        assert harness_report["phase"] == "done"
         assert len(report["variants"]) == 6
 
         if not args.skip_harness_tests:

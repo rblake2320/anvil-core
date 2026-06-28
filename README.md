@@ -39,6 +39,20 @@ The contract is a portable JSON artifact that maps compiler DAG nodes to governe
 - task `risk`
 - QA-authored acceptance checks
 
+## Execute a Generated Harness Contract
+
+After producing `harness_contract.json`, run it through the real `anvil-harness` lifecycle in deterministic simulated mode:
+
+```powershell
+anvil-core run-harness-contract `
+  --harness-contract .\.anvil-core\harness_contract.json `
+  --mode simulated `
+  --run-dir .\.anvil-core\harness-run `
+  --out .\.anvil-core\harness_run_report.json
+```
+
+This loads the JSON as `anvil.store.Contract`, creates a `MissionStore`, runs `Lifecycle` with `SimulatedAgent` and `SimulatedVerifier`, executes the contract, calls `learn`, and fails if the harness ledger audit fails.
+
 ## Run a benchmark
 
 Use explicit measurements when benchmarking real providers:
@@ -88,6 +102,8 @@ Measured fields:
 
 This package creates the bridge and benchmark harness. Live provider adapters for Claude Code, OpenAI, Ollama, and SelfConnect belong behind the adapter interfaces in `src/anvil_core/adapters.py`.
 
+The full 10/10 product target is tracked in `docs/ANVIL_10_OUT_OF_10.md`.
+
 ## Three-layer Smoke
 
 From this repo, run the local end-to-end artifact flow:
@@ -102,5 +118,5 @@ From this repo, run the local end-to-end artifact flow:
 This installs all three repos into the active Python environment, then runs:
 
 ```text
-compile -> verify-ledger -> compile-contract -> benchmark
+compile -> verify-ledger -> compile-contract -> run-harness-contract -> benchmark
 ```

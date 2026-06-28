@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .benchmark import contract_from_plan_file, load_optional_json, load_scenario, run_benchmark, write_report
-from .bridge import compiler_plan_to_contract, load_compiler_plan, write_contract
+from .bridge import compiler_plan_to_contract, harness_contract_dict, load_compiler_plan, write_contract
 from .models import to_jsonable
 
 
@@ -13,6 +13,10 @@ def cmd_compile_contract(args: argparse.Namespace) -> int:
     plan = load_compiler_plan(args.plan)
     contract = compiler_plan_to_contract(plan)
     write_contract(contract, args.out)
+    if args.harness_out:
+        out = Path(args.harness_out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(harness_contract_dict(contract), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0
 
 
@@ -40,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("compile-contract", help="Convert an ANVIL compiler plan into a harness contract artifact")
     c.add_argument("--plan", required=True)
     c.add_argument("--out", required=True)
+    c.add_argument("--harness-out", help="Also write a JSON artifact shaped like anvil-harness Contract/Task data.")
     c.set_defaults(func=cmd_compile_contract)
 
     b = sub.add_parser("benchmark", help="Generate a repeatable benchmark report")
@@ -62,4 +67,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

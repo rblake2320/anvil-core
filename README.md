@@ -24,10 +24,20 @@ python -m unittest discover -s tests
 ```powershell
 anvil-core compile-contract `
   --plan ..\anvil_context_compiler\.anvil\plan.json `
-  --out .\.anvil-core\contract.json
+  --out .\.anvil-core\contract.json `
+  --harness-out .\.anvil-core\harness_contract.json
 ```
 
-The contract is a portable JSON artifact that maps compiler DAG nodes to governed execution tasks: task ID, dependencies, tool name, token budget, and locked acceptance checks.
+The contract is a portable JSON artifact that maps compiler DAG nodes to governed execution tasks: task ID, dependencies, allowed tools, tool risk, harness risk, token budget, scope paths, and locked acceptance checks.
+
+`--harness-out` also writes a JSON artifact shaped like `anvil-harness` contract data:
+
+- `scope_in`
+- `scope_out`
+- task `paths`
+- task `tools`
+- task `risk`
+- QA-authored acceptance checks
 
 ## Run a benchmark
 
@@ -78,3 +88,19 @@ Measured fields:
 
 This package creates the bridge and benchmark harness. Live provider adapters for Claude Code, OpenAI, Ollama, and SelfConnect belong behind the adapter interfaces in `src/anvil_core/adapters.py`.
 
+## Three-layer Smoke
+
+From this repo, run the local end-to-end artifact flow:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run_three_layer_e2e.py `
+  --compiler-root ..\anvil_context_compiler `
+  --harness-root ..\anvil-harness\anvil `
+  --core-root .
+```
+
+This installs all three repos into the active Python environment, then runs:
+
+```text
+compile -> verify-ledger -> compile-contract -> benchmark
+```

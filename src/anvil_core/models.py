@@ -25,6 +25,9 @@ class ContractTask:
     description: str
     depends_on: list[str] = field(default_factory=list)
     tool_name: str | None = None
+    allowed_tools: list[str] = field(default_factory=list)
+    risk: str = "reversible"
+    tool_risk: str = "none"
     token_budget: int = 0
     acceptance_checks: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
@@ -39,6 +42,9 @@ class ExecutionContract:
     normalized_intent: str
     source_plan_hash: str
     tasks: list[ContractTask]
+    scope_in: list[str] = field(default_factory=list)
+    scope_out: list[str] = field(default_factory=list)
+    tool_policy: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=utc_now)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -70,4 +76,3 @@ class BenchmarkReport:
     winner_by_quality: str
     created_at: str = field(default_factory=utc_now)
     metadata: dict[str, Any] = field(default_factory=dict)
-

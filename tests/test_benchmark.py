@@ -33,7 +33,39 @@ class BenchmarkTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_benchmark({"name": "empty", "request": "x"})
 
+    def test_quality_winner_prefers_pass_rate_over_raw_pass_count(self) -> None:
+        report = run_benchmark(
+            {
+                "name": "quality",
+                "request": "x",
+                "measurements": [
+                    {
+                        "variant": "baseline_claude_code",
+                        "input_tokens": 100,
+                        "output_tokens": 100,
+                        "tool_schema_tokens": 100,
+                        "wall_time_ms": 100,
+                        "patch_size_bytes": 100,
+                        "tests_passed": 9,
+                        "tests_total": 20,
+                        "completed": True,
+                    },
+                    {
+                        "variant": "anvil_compiler_harness",
+                        "input_tokens": 100,
+                        "output_tokens": 100,
+                        "tool_schema_tokens": 100,
+                        "wall_time_ms": 100,
+                        "patch_size_bytes": 120,
+                        "tests_passed": 3,
+                        "tests_total": 3,
+                        "completed": True,
+                    },
+                ],
+            }
+        )
+        self.assertEqual(report.winner_by_quality, "anvil_compiler_harness")
+
 
 if __name__ == "__main__":
     unittest.main()
-

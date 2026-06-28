@@ -155,12 +155,15 @@ def _winner_by_cost(measurements: list[BenchmarkMeasurement]) -> str:
 
 
 def _winner_by_quality(measurements: list[BenchmarkMeasurement]) -> str:
-    def quality(item: BenchmarkMeasurement) -> tuple[int, int, int, int]:
+    def quality(item: BenchmarkMeasurement) -> tuple[int, float, int, int, int, int]:
+        pass_rate = item.tests_passed / item.tests_total if item.tests_total else 0.0
         return (
-            item.tests_passed,
             1 if item.completed else 0,
+            pass_rate,
+            item.tests_total,
             item.unnecessary_files_prevented + item.unnecessary_deps_prevented,
             -item.patch_size_bytes,
+            -item.rehydrations,
         )
 
     return max(measurements, key=quality).variant
@@ -174,4 +177,3 @@ def contract_from_plan_file(path: str | None) -> dict[str, Any] | None:
     if not path:
         return None
     return to_jsonable(compiler_plan_to_contract(load_compiler_plan(path)))
-

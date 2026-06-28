@@ -31,3 +31,29 @@ jobs:
 
       - name: Benchmark smoke
         run: anvil-core benchmark --scenario examples/benchmark_scenario.json --offline-synthetic --out .anvil-core/benchmark_report.json
+
+  three-layer-e2e:
+    name: Three-layer E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: anvil-core
+
+      - uses: actions/checkout@v4
+        with:
+          repository: rblake2320/anvil-context-compiler
+          path: anvil_context_compiler
+
+      - uses: actions/checkout@v4
+        with:
+          repository: rblake2320/anvil-harness
+          path: anvil-harness
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Three-layer smoke
+        run: python anvil-core/scripts/run_three_layer_e2e.py --compiler-root anvil_context_compiler --harness-root anvil-harness --core-root anvil-core

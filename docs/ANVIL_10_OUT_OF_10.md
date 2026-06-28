@@ -97,7 +97,7 @@ Done:
 
 - Generated harness contracts execute through `anvil-harness` Lifecycle in simulated mode.
 - Three-layer E2E now runs compile, ledger verification, contract generation, harness execution, benchmark generation, and harness tests.
-- Local/Ollama measured provider adapter records provider-reported token/timing usage and proof artifacts.
+- Local/Ollama measured provider adapter records provider-reported token/timing usage and proof artifacts; live-tested against a real local Ollama model.
 - Synthetic benchmarks are clearly labeled and suitable only for CI/demo smoke.
 
 Next:

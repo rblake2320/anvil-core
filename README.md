@@ -98,6 +98,16 @@ anvil-core benchmark `
   --out .\.anvil-core\benchmark_report.json
 ```
 
+Run the live provider tests with a real local model:
+
+```powershell
+$env:ANVIL_OLLAMA_LIVE_MODEL = "qwen2.5:7b"
+$env:ANVIL_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+python -m unittest tests.test_providers -v
+```
+
+Provider tests do not use a fake server. If `ANVIL_OLLAMA_LIVE_MODEL` is unset, they skip instead of fabricating measurements.
+
 For CI and demos, `--offline-synthetic` fills missing variants with deterministic estimates. Reports label this clearly as synthetic.
 
 ```powershell

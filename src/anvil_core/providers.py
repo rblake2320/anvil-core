@@ -78,10 +78,8 @@ class OllamaBenchmarkAdapter:
             provider="ollama",
             model=model,
             provider_usage=usage,
-            artifacts=artifacts.manifest(),
+            artifacts={**artifacts.manifest(), "measurement.json": str(artifacts.root / "measurement.json")},
         )
-        artifacts.write_json("measurement.json", to_jsonable(measurement))
-        measurement.artifacts = artifacts.manifest()
         artifacts.write_json("measurement.json", to_jsonable(measurement))
         return measurement
 

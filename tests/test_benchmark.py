@@ -66,6 +66,35 @@ class BenchmarkTests(unittest.TestCase):
         )
         self.assertEqual(report.winner_by_quality, "anvil_compiler_harness")
 
+    def test_measured_provider_metadata_is_preserved(self) -> None:
+        report = run_benchmark(
+            {
+                "name": "provider",
+                "request": "x",
+                "measurements": [
+                    {
+                        "variant": "baseline_claude_code",
+                        "input_tokens": 11,
+                        "output_tokens": 7,
+                        "tool_schema_tokens": 3,
+                        "wall_time_ms": 50,
+                        "patch_size_bytes": 15,
+                        "tests_passed": 1,
+                        "tests_total": 1,
+                        "provider": "ollama",
+                        "model": "unit-model",
+                        "provider_usage": {"prompt_eval_count": 11},
+                        "artifacts": {"measurement.json": "artifacts/measurement.json"},
+                    }
+                ],
+            }
+        )
+        measurement = report.variants[0]
+        self.assertEqual(measurement.provider, "ollama")
+        self.assertEqual(measurement.model, "unit-model")
+        self.assertEqual(measurement.provider_usage["prompt_eval_count"], 11)
+        self.assertIn("measurement.json", measurement.artifacts)
+
 
 if __name__ == "__main__":
     unittest.main()

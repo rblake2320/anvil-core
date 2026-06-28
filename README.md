@@ -65,6 +65,39 @@ anvil-core benchmark `
   --out .\.anvil-core\benchmark_report.json
 ```
 
+## Measure a Provider
+
+The first measured provider adapter is local Ollama. It calls `/api/generate` with `stream=false`, records provider-reported token/timing usage, and saves proof artifacts.
+
+```powershell
+anvil-core measure-provider `
+  --provider ollama `
+  --variant baseline_claude_code `
+  --model llama3.2 `
+  --scenario .\examples\benchmark_scenario.json `
+  --prompt-file .\.anvil-core\raw_prompt.txt `
+  --artifact-dir .\.anvil-core\artifacts\baseline_ollama `
+  --out .\.anvil-core\measurements\baseline_ollama.json
+```
+
+Artifacts include:
+
+- `raw_prompt.txt`
+- `provider_request.json`
+- `provider_output.txt`
+- `provider_raw_response.json`
+- `provider_usage.json`
+- `measurement.json`
+
+Then include the measured output in a benchmark report:
+
+```powershell
+anvil-core benchmark `
+  --scenario .\examples\benchmark_scenario.json `
+  --measurement-file .\.anvil-core\measurements\baseline_ollama.json `
+  --out .\.anvil-core\benchmark_report.json
+```
+
 For CI and demos, `--offline-synthetic` fills missing variants with deterministic estimates. Reports label this clearly as synthetic.
 
 ```powershell

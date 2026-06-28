@@ -65,6 +65,10 @@ class BenchmarkMeasurement:
     completed: bool = True
     mode: str = "measured"
     notes: str = ""
+    provider: str = ""
+    model: str = ""
+    provider_usage: dict[str, Any] = field(default_factory=dict)
+    artifacts: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

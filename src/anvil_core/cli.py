@@ -8,6 +8,7 @@ from .benchmark import contract_from_plan_file, load_optional_json, load_scenari
 from .bridge import compiler_plan_to_contract, harness_contract_dict, load_compiler_plan, write_contract
 from .harness_runner import load_harness_contract, run_harness_contract
 from .models import to_jsonable
+from .providers import OllamaBenchmarkAdapter
 
 
 def cmd_compile_contract(args: argparse.Namespace) -> int:
@@ -23,6 +24,11 @@ def cmd_compile_contract(args: argparse.Namespace) -> int:
 
 def cmd_benchmark(args: argparse.Namespace) -> int:
     scenario = load_scenario(args.scenario)
+    if args.measurement_file:
+        measurements = list(scenario.get("measurements", []))
+        for file in args.measurement_file:
+            measurements.append(json.loads(Path(file).read_text(encoding="utf-8")))
+        scenario["measurements"] = measurements
     compiled_plan = load_optional_json(args.compiled_plan)
     contract = load_optional_json(args.contract) or contract_from_plan_file(args.compiled_plan)
     report = run_benchmark(
@@ -56,6 +62,36 @@ def cmd_run_harness_contract(args: argparse.Namespace) -> int:
     return 0 if report["ok"] else 1
 
 
+def cmd_measure_provider(args: argparse.Namespace) -> int:
+    scenario = load_scenario(args.scenario)
+    if args.prompt_file:
+        prompt = Path(args.prompt_file).read_text(encoding="utf-8")
+    else:
+        prompt = str(scenario.get("request", ""))
+    artifact_dir = args.artifact_dir or f".anvil-core/artifacts/{args.variant}-{args.provider}"
+    if args.provider != "ollama":
+        raise ValueError(f"Unsupported provider: {args.provider}")
+    measurement = OllamaBenchmarkAdapter(base_url=args.base_url, timeout=args.timeout).run_variant(
+        variant=args.variant,
+        model=args.model,
+        prompt=prompt,
+        artifact_dir=artifact_dir,
+        tool_schema_tokens=args.tool_schema_tokens if args.tool_schema_tokens is not None else int(scenario.get("tool_schema_tokens", 0)),
+        tests_passed=args.tests_passed,
+        tests_total=args.tests_total,
+        patch_size_bytes=args.patch_size_bytes,
+        options=json.loads(args.options_json) if args.options_json else None,
+    )
+    payload = to_jsonable(measurement)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    else:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="anvil-core", description="ANVIL integration and benchmark CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -70,6 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--scenario", required=True)
     b.add_argument("--compiled-plan")
     b.add_argument("--contract")
+    b.add_argument("--measurement-file", action="append", help="Measured BenchmarkMeasurement JSON to include in the report.")
     b.add_argument("--offline-synthetic", action="store_true")
     b.add_argument("--out")
     b.set_defaults(func=cmd_benchmark)
@@ -81,6 +118,23 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--deny-irreversible", action="store_true", help="Deny irreversible approvals in simulated mode.")
     r.add_argument("--out")
     r.set_defaults(func=cmd_run_harness_contract)
+
+    m = sub.add_parser("measure-provider", help="Run one measured provider variant and save proof artifacts")
+    m.add_argument("--provider", choices=["ollama"], required=True)
+    m.add_argument("--variant", required=True)
+    m.add_argument("--model", required=True)
+    m.add_argument("--scenario", required=True)
+    m.add_argument("--prompt-file", help="Prompt to send. Defaults to scenario.request.")
+    m.add_argument("--base-url", default="http://127.0.0.1:11434")
+    m.add_argument("--timeout", type=int, default=600)
+    m.add_argument("--artifact-dir")
+    m.add_argument("--tool-schema-tokens", type=int)
+    m.add_argument("--tests-passed", type=int, default=0)
+    m.add_argument("--tests-total", type=int, default=0)
+    m.add_argument("--patch-size-bytes", type=int)
+    m.add_argument("--options-json", help="JSON object passed to Ollama options.")
+    m.add_argument("--out")
+    m.set_defaults(func=cmd_measure_provider)
 
     return parser
 

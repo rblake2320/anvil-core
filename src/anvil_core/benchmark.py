@@ -85,6 +85,10 @@ def _explicit_measurements(scenario: dict[str, Any]) -> list[BenchmarkMeasuremen
                 completed=bool(item.get("completed", True)),
                 mode=str(item.get("mode", "measured")),
                 notes=str(item.get("notes", "")),
+                provider=str(item.get("provider", "")),
+                model=str(item.get("model", "")),
+                provider_usage=dict(item.get("provider_usage", {})),
+                artifacts=dict(item.get("artifacts", {})),
             )
         )
     return values

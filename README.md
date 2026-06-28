@@ -67,7 +67,13 @@ anvil-core benchmark `
 
 ## Measure a Provider
 
-The first measured provider adapter is local Ollama. It calls `/api/generate` with `stream=false`, records provider-reported token/timing usage, and saves proof artifacts.
+Measured provider adapters are available for:
+
+- `ollama`: local `/api/generate`, no API key
+- `openai`: OpenAI `/chat/completions`, `OPENAI_API_KEY`
+- `openrouter`: OpenRouter `/chat/completions`, `OPENROUTER_API_KEY`
+
+Each adapter records provider-reported token/timing or usage data and saves proof artifacts.
 
 ```powershell
 anvil-core measure-provider `
@@ -78,6 +84,32 @@ anvil-core measure-provider `
   --prompt-file .\.anvil-core\raw_prompt.txt `
   --artifact-dir .\.anvil-core\artifacts\baseline_ollama `
   --out .\.anvil-core\measurements\baseline_ollama.json
+```
+
+OpenAI API example:
+
+```powershell
+anvil-core measure-provider `
+  --provider openai `
+  --variant baseline_claude_code `
+  --model gpt-4o-mini `
+  --scenario .\examples\benchmark_scenario.json `
+  --artifact-dir .\.anvil-core\artifacts\baseline_openai `
+  --out .\.anvil-core\measurements\baseline_openai.json `
+  --options-json '{"max_completion_tokens":16}'
+```
+
+OpenRouter API example:
+
+```powershell
+anvil-core measure-provider `
+  --provider openrouter `
+  --variant baseline_claude_code `
+  --model openrouter/auto `
+  --scenario .\examples\benchmark_scenario.json `
+  --artifact-dir .\.anvil-core\artifacts\baseline_openrouter `
+  --out .\.anvil-core\measurements\baseline_openrouter.json `
+  --options-json '{"max_tokens":16}'
 ```
 
 Artifacts include:
@@ -98,15 +130,22 @@ anvil-core benchmark `
   --out .\.anvil-core\benchmark_report.json
 ```
 
-Run the live provider tests with a real local model:
+Run the live provider tests with real provider access:
 
 ```powershell
 $env:ANVIL_OLLAMA_LIVE_MODEL = "qwen2.5:7b"
 $env:ANVIL_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+
+$env:ANVIL_OPENAI_LIVE_MODEL = "gpt-4o-mini"
+$env:OPENAI_API_KEY = "<real key>"
+
+$env:ANVIL_OPENROUTER_LIVE_MODEL = "openrouter/auto"
+$env:OPENROUTER_API_KEY = "<real key>"
+
 python -m unittest tests.test_providers -v
 ```
 
-Provider tests do not use a fake server. If `ANVIL_OLLAMA_LIVE_MODEL` is unset, they skip instead of fabricating measurements.
+Provider tests do not use fake servers. If a provider's explicit live model variable is unset, that provider's tests skip instead of fabricating measurements. If the live model variable is set but the API key, local server, or model is unavailable, the test fails.
 
 For CI and demos, `--offline-synthetic` fills missing variants with deterministic estimates. Reports label this clearly as synthetic.
 

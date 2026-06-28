@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .benchmark import contract_from_plan_file, load_optional_json, load_scenario, run_benchmark, write_report
 from .bridge import compiler_plan_to_contract, harness_contract_dict, load_compiler_plan, write_contract
 from .harness_runner import load_harness_contract, run_harness_contract
 from .models import to_jsonable
-from .providers import OllamaBenchmarkAdapter
+from .providers import OllamaBenchmarkAdapter, OpenAIChatCompletionAdapter, OpenRouterChatCompletionAdapter
 
 
 def cmd_compile_contract(args: argparse.Namespace) -> int:
@@ -69,14 +70,13 @@ def cmd_measure_provider(args: argparse.Namespace) -> int:
     else:
         prompt = str(scenario.get("request", ""))
     artifact_dir = args.artifact_dir or f".anvil-core/artifacts/{args.variant}-{args.provider}"
-    if args.provider != "ollama":
-        raise ValueError(f"Unsupported provider: {args.provider}")
-    measurement = OllamaBenchmarkAdapter(base_url=args.base_url, timeout=args.timeout).run_variant(
+    adapter = _provider_adapter(args)
+    measurement = adapter.run_variant(
         variant=args.variant,
         model=args.model,
         prompt=prompt,
         artifact_dir=artifact_dir,
-        tool_schema_tokens=args.tool_schema_tokens if args.tool_schema_tokens is not None else int(scenario.get("tool_schema_tokens", 0)),
+        tool_schema_tokens=_tool_schema_tokens(args, scenario),
         tests_passed=args.tests_passed,
         tests_total=args.tests_total,
         patch_size_bytes=args.patch_size_bytes,
@@ -90,6 +90,36 @@ def cmd_measure_provider(args: argparse.Namespace) -> int:
     else:
         print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
+
+
+def _provider_adapter(
+    args: argparse.Namespace,
+) -> OllamaBenchmarkAdapter | OpenAIChatCompletionAdapter | OpenRouterChatCompletionAdapter:
+    if args.provider == "ollama":
+        return OllamaBenchmarkAdapter(base_url=args.base_url or "http://127.0.0.1:11434", timeout=args.timeout)
+    if args.provider == "openai":
+        key = os.getenv(args.api_key_env or "OPENAI_API_KEY", "")
+        return OpenAIChatCompletionAdapter(
+            api_key=key,
+            base_url=args.base_url or "https://api.openai.com/v1",
+            timeout=args.timeout,
+        )
+    if args.provider == "openrouter":
+        key = os.getenv(args.api_key_env or "OPENROUTER_API_KEY", "")
+        return OpenRouterChatCompletionAdapter(
+            api_key=key,
+            base_url=args.base_url or "https://openrouter.ai/api/v1",
+            timeout=args.timeout,
+            site_url=args.site_url,
+            app_title=args.app_title,
+        )
+    raise ValueError(f"Unsupported provider: {args.provider}")
+
+
+def _tool_schema_tokens(args: argparse.Namespace, scenario: dict[str, object]) -> int:
+    if args.tool_schema_tokens is not None:
+        return int(args.tool_schema_tokens)
+    return int(scenario.get("tool_schema_tokens", 0))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -106,7 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--scenario", required=True)
     b.add_argument("--compiled-plan")
     b.add_argument("--contract")
-    b.add_argument("--measurement-file", action="append", help="Measured BenchmarkMeasurement JSON to include in the report.")
+    b.add_argument(
+        "--measurement-file",
+        action="append",
+        help="Measured BenchmarkMeasurement JSON to include in the report.",
+    )
     b.add_argument("--offline-synthetic", action="store_true")
     b.add_argument("--out")
     b.set_defaults(func=cmd_benchmark)
@@ -120,19 +154,22 @@ def build_parser() -> argparse.ArgumentParser:
     r.set_defaults(func=cmd_run_harness_contract)
 
     m = sub.add_parser("measure-provider", help="Run one measured provider variant and save proof artifacts")
-    m.add_argument("--provider", choices=["ollama"], required=True)
+    m.add_argument("--provider", choices=["ollama", "openai", "openrouter"], required=True)
     m.add_argument("--variant", required=True)
     m.add_argument("--model", required=True)
     m.add_argument("--scenario", required=True)
     m.add_argument("--prompt-file", help="Prompt to send. Defaults to scenario.request.")
-    m.add_argument("--base-url", default="http://127.0.0.1:11434")
+    m.add_argument("--base-url")
+    m.add_argument("--api-key-env", help="Environment variable containing the API key for OpenAI-compatible providers.")
+    m.add_argument("--site-url", help="Optional OpenRouter HTTP-Referer attribution header.")
+    m.add_argument("--app-title", help="Optional OpenRouter X-OpenRouter-Title attribution header.")
     m.add_argument("--timeout", type=int, default=600)
     m.add_argument("--artifact-dir")
     m.add_argument("--tool-schema-tokens", type=int)
     m.add_argument("--tests-passed", type=int, default=0)
     m.add_argument("--tests-total", type=int, default=0)
     m.add_argument("--patch-size-bytes", type=int)
-    m.add_argument("--options-json", help="JSON object passed to Ollama options.")
+    m.add_argument("--options-json", help="JSON object merged into the provider request payload.")
     m.add_argument("--out")
     m.set_defaults(func=cmd_measure_provider)
 
